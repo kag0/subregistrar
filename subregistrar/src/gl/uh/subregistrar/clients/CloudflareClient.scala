@@ -20,62 +20,90 @@ import gl.uh.subregistrar.Server.F
 import gl.uh.subregistrar.models.cloudflare._
 import play.api.libs.json.{Format, JsBoolean, JsSuccess, JsValue, Json, Reads}
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-class CloudflareClient(sld: String, zoneId: String, token: String)
-                      (implicit
-                         system: ActorSystem,
-                         F: MonadError[Server.F, Error]
-                      )
-                       extends CloudflareService[Server.F]
-                       with PlayJsonSupport {
+class CloudflareClient(sld: String, zoneId: String, token: String)(
+    implicit
+    system: ActorSystem,
+    F: MonadError[Server.F, Error]
+) extends CloudflareService[Server.F]
+    with PlayJsonSupport
+    with LazyLogging {
   private implicit val ec = system.dispatcher
 
-  def listNameServers(name: String) = for {
-    response <- EitherT.right(request(
-      Get(base(/("dns_records"))
-        .withQuery(Query("type" -> "NS", "name" -> (name + sld)))
+  def listNameServers(name: String) =
+    for {
+      response <- EitherT.right(
+        request(
+          Get(
+            base(/("dns_records"))
+              .withQuery(Query("type" -> "NS", "name" -> (name + sld)))
+          )
+        )
       )
-    ))
 
-    result <- EitherT.right(
-      Unmarshal(response).to[CloudflairResponse[Seq[DnsRecord]]]
-    )
+      result <- EitherT.right(
+        Unmarshal(response).to[CloudflairResponse[Seq[DnsRecord]]]
+      )
 
-    records <- errorToException(result)
-  } yield records.map(r => NameServer(r.id, r.content))
+      records <- errorToException(result)
 
-  def createNameServer(name: String, nameServer: String) = for {
-    response <- EitherT.right(request(
-      Post(base(/("dns_records")), CreateDnsRequest("NS", (name + sld), nameServer))
-    ))
+    } yield records.map(r => NameServer(r.id, r.content))
 
-    result <- EitherT.right(
-      Unmarshal(response)
-        .to[CloudflairResponse[DnsRecord]]
-    )
+  def createNameServer(name: String, nameServer: String) =
+    for {
+      response <- EitherT.right(
+        request(
+          Post(
+            base(/("dns_records")),
+            CreateDnsRequest("NS", name, nameServer)
+          )
+        )
+      )
 
-    _ <- errorToException(result)
-  } yield ()
+      strictResponse <- EitherT.right(response.toStrict(Duration(5, "seconds")))
 
-  def deleteNameServer(id: String) = for {
-    response <- EitherT.right(request(Delete(base(/("dns_records") / id))))
-    result <- EitherT.right(Unmarshal(response).to[CloudflairResponse[JsValue]])
-    _ <- errorToException(result)
-  } yield ()
+      _ = strictResponse.entity.dataBytes
+        .runReduce(_ ++ _)
+        .map(_.utf8String)
+        .foreach(logger.debug(_))
+
+      result <- EitherT.right {
+        Unmarshal(strictResponse)
+          .to[CloudflairResponse[DnsRecord]]
+      }
+
+      _ <- errorToException(result)
+    } yield ()
+
+  def deleteNameServer(id: String) =
+    for {
+      response <- EitherT.right(request(Delete(base(/("dns_records") / id))))
+      result <- EitherT.right(
+        Unmarshal(response).to[CloudflairResponse[JsValue]]
+      )
+      _ <- errorToException(result)
+    } yield ()
 
   private def base(path: Path) =
-    Uri("https://api.cloudflare.com").withPath(/ ("client") / "v4" / "zones" / zoneId ++ path)
+    Uri("https://api.cloudflare.com").withPath(
+      /("client") / "v4" / "zones" / zoneId ++ path
+    )
 
   private def request(request: HttpRequest) =
     Http().singleRequest(
       request.addHeader(Authorization(OAuth2BearerToken(token)))
     )
 
-  private def errorToException[A](result: CloudflairResponse[A]) = result match {
-    case CloudflairResult(a) => EitherT.rightT[Future, Error](a)
-    case error: CloudflairErrors => EitherT.right[Error](Future.failed(
-      error.toException
-    ))
-  }
+  private def errorToException[A](result: CloudflairResponse[A]) =
+    result match {
+      case CloudflairResult(a) => EitherT.rightT[Future, Error](a)
+      case error: CloudflairErrors =>
+        EitherT.right[Error](
+          Future.failed(
+            error.toException
+          )
+        )
+    }
 }

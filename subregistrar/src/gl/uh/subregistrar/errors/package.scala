@@ -21,4 +21,5 @@ package object errors extends PlayJsonSupport {
   val nameAlreadyRegistered = "NameAlreadyRegistered"
   val invalidName = "InvalidName"
   val unauthorized = "Unauthorized"
+  val unauthenticated = "Unauthenticated"
 }

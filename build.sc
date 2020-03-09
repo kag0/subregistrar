@@ -12,6 +12,9 @@ object subregistrar extends ScalaModule {
     ivy"ch.qos.logback:logback-classic:1.2.3",
     ivy"com.typesafe.scala-logging::scala-logging:3.9.2",
     //ivy"com.google.api-client:google-api-client:1.30.9",
-    ivy"com.google.auth:google-auth-library-oauth2-http:0.20.0"
+    ivy"com.google.auth:google-auth-library-oauth2-http:0.20.0",
+    ivy"com.typesafe:config:1.4.0",
+    ivy"black.door::jose:0.3.0",
+    ivy"black.door::jose-json-play:0.3.0"
   )
 }
