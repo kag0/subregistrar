@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome</title>
+</head>
+<body>
+dot uh good luck | 
+<a href="index.html">about</a> | 
+support
+<br><br>
+
+<div id="message"></div>
+
+</body>
+
+<script>
+	let message = decodeURIComponent(location.hash.substring(1));
+	document.getElementById("message").innerText = message;
+</script>
+</html> 

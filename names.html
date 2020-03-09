@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Register names</title>
+</head>
+<body>
+dot uh good luck | 
+<a href="index.html">about</a> | 
+support
+<br>
+<br>
+
+<div id="names"></div>
+
+<br>
+<input type="text" id="new-name"><button type="button" onclick="registerName(document.getElementById('new-name').value)">register</button>
+
+</body>
+
+<script>
+	fetch(`http://localhost:8080/names`, {
+		headers: {
+			'Authorization': `Bearer ${window.localStorage.getItem("token")}`,
+		}
+	})
+		.then(response => {
+			if(response.ok) {
+				let namesNode = document.getElementById("names");
+				response
+					.json()
+					.then(names => {
+						names.forEach(name => {
+							let link = document.createElement("a");
+							link.href = `name.html#${encodeURIComponent(name)}`;
+							link.innerText = name;
+							namesNode.appendChild(link);
+							namesNode.appendChild(document.createElement("br"));
+						})
+					});
+			} else {
+				response
+					.text()
+					.then(message => location.href = `message.html#${encodeURIComponent(message)}`)
+			}
+		});
+
+	function registerName(name) {
+		fetch(`http://localhost:8080/names/${name}`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${window.localStorage.getItem("token")}`,
+			}
+		})
+			.then(response => {
+				if(response.ok) {
+					location.reload();
+				} else {
+					response
+					.text()
+					.then(message => location.href = `message.html#${encodeURIComponent(message)}`)
+				}
+			});
+	}
+</script>
+</html> 

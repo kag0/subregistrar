@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Log In</title>
+</head>
+<body>
+
+dot uh good luck | 
+<a href="index.html">about</a> | 
+support
+<br>
+<br>
+<a href="#" 
+	onclick="
+		authenticationRequest(
+			'https://accounts.google.com/o/oauth2/v2/auth', 
+			'481270212892-982sm563s81avc7gnmu9u60m0lqm7h4a.apps.googleusercontent.com', 
+			`${location.protocol}//${location.hostname}/login.html?provider=google`, //'https://dot.uh.gl/login.html?provider=google',
+			'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+		);
+		return false;
+	"
+>
+google
+</a><br>
+<a href="#">microsoft</a><br>
+</body>
+
+<script>
+	if(window.localStorage.getItem("token") != null) {
+		window.location.href = "names.html";
+	}
+
+	let paramsOnLoad = new URLSearchParams(window.location.search);
+	if(paramsOnLoad.has("provider")) {
+		tokenRequest(
+			paramsOnLoad.get("provider"), 
+			paramsOnLoad.get("code"), 
+			`${location.protocol}//${location.hostname}/login.html?provider=${paramsOnLoad.get("provider")}`
+		);
+	}
+
+	function authenticationRequest(provider, clientId, redirectUri, scopes) {
+		let params = new URLSearchParams();
+		params.append("response_type", "code")
+		params.append("client_id", clientId);
+		params.append("redirect_uri", redirectUri);
+		params.append("scope", scopes);
+		window.location.href = provider + '?' + params.toString();
+	}
+
+	function tokenRequest(provider, code, redirectUri){
+		let body = new URLSearchParams();
+		body.append("provider", provider);
+		body.append("code", code);
+		body.append("redirect_uri", redirectUri)
+		fetch("http://localhost:8080/token", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			}, 
+			body: body.toString()
+		})
+			.then(response => response.json())
+			.then(response => {
+				window.localStorage.setItem("token", response.access_token);
+				location.href = "login.html";
+			});
+	}
+</script>
+</html> 

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Name Records</title>
+</head>
+<body>
+dot uh good luck | 
+<a href="index.html">about</a> | 
+support
+<br><br>
+
+<div id="name-servers"></div>
+<br>
+<input type="text" id="new-ns"><button type="button" onclick="createNs(decodeURIComponent(location.hash.substring(1)), document.getElementById('new-ns').value)">add nameserver</button>
+
+</body>
+
+<script>
+	let name = decodeURIComponent(location.hash.substring(1));
+	fetch(`http://localhost:8080/names/${name}`, {
+		headers: {
+			'Authorization': `Bearer ${window.localStorage.getItem("token")}`
+		}
+	})
+		.then(response => {
+			if(response.ok) {
+				let nsNode = document.getElementById("name-servers");
+				response.json().then(nameServers => {
+					nameServers.forEach(ns => {
+							let nameSpan = document.createElement("span");
+							let del = document.createElement("a");
+							del.innerText = "X";
+							del.style.color = "red";
+							del.href = "#";
+							del.onclick = () => deleteNs(name, ns.id);
+							nameSpan.appendChild(del);
+							nameSpan.appendChild(document.createTextNode("	" + ns.nameServer));
+
+							//link.href = `name.html#${encodeURIComponent(name)}`;
+							//link.innerText = name;
+							nsNode.appendChild(nameSpan);
+							nsNode.appendChild(document.createElement("br"));
+						})
+					})
+			} else {
+				response
+				.text()
+				.then(message => location.href = `message.html#${encodeURIComponent(message)}`)
+			}
+		});
+
+		function deleteNs(name, id) {
+
+		}
+
+		function createNs(name, value) {
+			fetch(`http://localhost:8080/names/${name}/nameServers`, {
+				method: "POST",
+				headers: {
+					'Authorization': `Bearer ${window.localStorage.getItem("token")}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({nameServer: value})
+			})
+			.then(response => location.reload());
+		}
+
+</script>
+</html> 
